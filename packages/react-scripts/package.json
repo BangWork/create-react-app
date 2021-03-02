@@ -1,6 +1,13 @@
 {
-  "name": "react-scripts",
-  "version": "4.0.3",
+  "name": "@ones-ai/react-scripts",
+  "version": "4.0.3-3",
+  "maintainers": [
+    {
+      "name": "ones",
+      "email": "npm@ones.ai",
+      "web": "ones.ai"
+    }
+  ],
   "description": "Configuration and scripts for Create React App.",
   "repository": {
     "type": "git",
