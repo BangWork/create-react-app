@@ -1,0 +1,23 @@
+{
+  "name": "@ones-ai/cra-template-ones",
+  "version": "0.0.2",
+  "description": "The base template for ONES React App.",
+  "maintainers": [
+    {
+      "name": "ones",
+      "email": "npm@ones.ai",
+      "web": "ones.ai"
+    }
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
+  "bugs": {
+    "url": "https://github.com/facebook/create-react-app/issues"
+  },
+  "files": [
+    "template",
+    "template.json"
+  ]
+}
