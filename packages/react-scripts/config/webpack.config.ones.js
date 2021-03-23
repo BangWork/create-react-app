@@ -12,7 +12,16 @@ module.exports = function(webpackEnv) {
     mode: isEnvProduction ? 'production' : isEnvDevelopment && 'development',
     entry: paths.appIndexJs,
     output: {
-      library: 'someLibName',
+      path: isEnvProduction ? paths.appBuild : undefined,
+      /**
+       * publicPath 必需为相对路径，否则 import-html-entry 将不能成功加载资源
+       */
+      publicPath: '',
+      // this defaults to 'window', but by setting it to 'this' then
+      // module chunks which are built will work in web workers as well.
+      globalObject: 'this',
+
+      library: 'ONESPluginLibrary',
       libraryTarget: 'umd'
     },
     externals: {
