@@ -1,6 +1,6 @@
 {
   "name": "@ones-ai/cra-template-ones",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "The base template for ONES React App.",
   "maintainers": [
     {
