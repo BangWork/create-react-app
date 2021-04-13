@@ -1,4 +1,5 @@
-import { registerPlugin, OPFCore } from '@ones-ai/opf-core';
+import { registerPlugin, OPFCore, OPFRouter } from '@ones-ai/opf-core';
+import App from './App';
 
 registerPlugin({
   async bootstrap() {
@@ -8,11 +9,21 @@ registerPlugin({
     log('插件挂载');
 
     addI18nResources();
+
+    addRoute();
   },
   async unmount() {
     log('插件卸载');
   }
 });
+
+function addRoute() {
+  OPFCore.router.addRoute({
+    path: '/my-plugin',
+    slot: OPFRouter.Slots.ROOT,
+    component: App
+  });
+}
 
 /**
  * 添加 i18n 资源
