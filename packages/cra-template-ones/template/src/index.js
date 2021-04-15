@@ -1,4 +1,4 @@
-import { registerPlugin, OPFCore, OPFRouter } from '@ones-ai/opf-core';
+import { registerPlugin, OPFCore } from '@ones-ai/opf-core';
 import App from './App';
 
 registerPlugin({
@@ -20,7 +20,7 @@ registerPlugin({
 function addRoute() {
   OPFCore.router.addRoute({
     path: '/my-plugin',
-    slot: OPFRouter.Slots.ROOT,
+    slot: 'ROOT',
     component: App
   });
 }
