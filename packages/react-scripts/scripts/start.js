@@ -43,7 +43,7 @@ const {
   prepareProxy,
   prepareUrls
 } = require('react-dev-utils/WebpackDevServerUtils');
-const openBrowser = require('react-dev-utils/openBrowser');
+const detect = require('detect-port-alt');
 const semver = require('semver');
 const paths = require('../config/paths');
 const configFactory = require('../config/webpack.config.ones');
@@ -60,8 +60,7 @@ if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
   process.exit(1);
 }
 
-const ENTRY_PORT = parseInt(process.env.ENTRY_PORT, 10);
-const PLUGIN_DEV_SERVER_PORT = parseInt(process.env.PLUGIN_DEV_SERVER_PORT, 10);
+const DEFAULT_PORT = parseInt(process.env.DEFAULT_PORT, 10) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 if (process.env.HOST) {
@@ -81,24 +80,19 @@ if (process.env.HOST) {
   console.log();
 }
 
-const changeToEntryUrl = url => {
-  const urlObj = new URL(url);
-
-  urlObj.port = ENTRY_PORT;
-
-  return urlObj.toString();
-};
-
 // We require that you explicitly set browsers and do not fall back to
 // browserslist defaults.
 const { checkBrowsers } = require('react-dev-utils/browsersHelper');
 checkBrowsers(paths.appPath, isInteractive)
   .then(() => {
-    if (!ENTRY_PORT || !PLUGIN_DEV_SERVER_PORT) {
-      // We have not found a port.
-      return;
-    }
-
+    return detect(DEFAULT_PORT, HOST)
+      .then((port) => {
+        if (port !== DEFAULT_PORT) {
+          throw new Error(`port: ${DEFAULT_PORT} was not occupied.`)
+        }
+      })
+  })
+  .then(() => {
     const config = configFactory('development');
     const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
     const appName = require(paths.appPackageJson).name;
@@ -108,7 +102,7 @@ checkBrowsers(paths.appPath, isInteractive)
     const urls = prepareUrls(
       protocol,
       HOST,
-      PLUGIN_DEV_SERVER_PORT,
+      DEFAULT_PORT,
       paths.publicUrlOrPath.slice(0, -1)
     );
     const devSocket = {
@@ -141,7 +135,7 @@ checkBrowsers(paths.appPath, isInteractive)
     );
     const devServer = new WebpackDevServer(compiler, serverConfig);
     // Launch WebpackDevServer.
-    devServer.listen(PLUGIN_DEV_SERVER_PORT, HOST, err => {
+    devServer.listen(DEFAULT_PORT, HOST, err => {
       if (err) {
         return console.log(err);
       }
@@ -158,7 +152,6 @@ checkBrowsers(paths.appPath, isInteractive)
       }
 
       console.log(chalk.cyan('Starting the development server...\n'));
-      openBrowser(changeToEntryUrl(urls.localUrlForBrowser));
     });
 
     ['SIGINT', 'SIGTERM'].forEach(function(sig) {

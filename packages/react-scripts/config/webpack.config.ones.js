@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { randomBytes } = require('crypto');
 const webpack = require('webpack');
 const resolve = require('resolve');
 const PnpWebpackPlugin = require('pnp-webpack-plugin');
@@ -39,8 +40,6 @@ const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'
 const getCacheIdentifier = require('react-dev-utils/getCacheIdentifier');
 // @remove-on-eject-end
 const postcssNormalize = require('postcss-normalize');
-
-const appPackageJson = require(paths.appPackageJson);
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
@@ -86,6 +85,11 @@ const hasJsxRuntime = (() => {
   } catch (e) {
     return false;
   }
+})();
+
+const libraryName = (() => {
+  const ramdomStr = randomBytes(16).toString('hex');
+  return `ONESPluginLibrary_${ramdomStr}`;
 })();
 
 // This is the production and development configuration.
@@ -217,21 +221,24 @@ module.exports = function(webpackEnv) {
           (info => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')),
       // Prevents conflicts when multiple webpack runtimes (from different apps)
       // are used on the same page.
-      jsonpFunction: `webpackJsonp${appPackageJson.name}`,
+      jsonpFunction: `webpackJsonp${libraryName}`,
       // this defaults to 'window', but by setting it to 'this' then
       // module chunks which are built will work in web workers as well.
       globalObject: 'this',
 
-      /**
-       * 需要打包成 umd
-       * TODO: library 名字是否需要完善
-       */
-      library: 'ONESPluginLibrary',
+      library: libraryName,
       libraryTarget: 'umd'
     },
-    // 所有外部 @ones-ai/opf-core 通过上下文获取
+    /**
+     * 所有 host 和 plugin 内同时依赖的且依赖单例才能正常工作的包都需要作为 external
+     * 例如 react hooks 的实现依赖于一个内部计数器实例，多个不同的 react 包一起工作将导致 hooks 出错
+     */
     externals: {
-      '@ones-ai/opf-core': '__ONES_AI_OPF_CORE'
+      '@ones-ai/opf-core': '__ONES_AI_OPF_CORE',
+      '@ones-plugin/ui': '__ONES_PLUGIN_UI',
+      'react': 'react',
+      'react-router': 'react-router',
+      'react-router-dom': 'react-router-dom',
     },
     optimization: {
       minimize: false,
