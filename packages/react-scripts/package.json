@@ -1,6 +1,13 @@
 {
-  "name": "react-scripts",
-  "version": "4.0.3",
+  "name": "@ones-ai/react-scripts",
+  "version": "4.0.3-12",
+  "maintainers": [
+    {
+      "name": "ones",
+      "email": "npm@ones.ai",
+      "web": "ones.ai"
+    }
+  ],
   "description": "Configuration and scripts for Create React App.",
   "repository": {
     "type": "git",
@@ -42,6 +49,7 @@
     "camelcase": "^6.1.0",
     "case-sensitive-paths-webpack-plugin": "2.3.0",
     "css-loader": "4.3.0",
+    "detect-port-alt": "^1.1.6",
     "dotenv": "8.2.0",
     "dotenv-expand": "5.1.0",
     "eslint": "^7.11.0",
@@ -57,6 +65,7 @@
     "file-loader": "6.1.1",
     "fs-extra": "^9.0.1",
     "html-webpack-plugin": "4.5.0",
+    "html-webpack-scripts-plugin": "^1.0.3",
     "identity-obj-proxy": "3.0.0",
     "jest": "26.6.0",
     "jest-circus": "26.6.0",

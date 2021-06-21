@@ -36,7 +36,7 @@ const chalk = require('react-dev-utils/chalk');
 const fs = require('fs-extra');
 const bfj = require('bfj');
 const webpack = require('webpack');
-const configFactory = require('../config/webpack.config');
+const configFactory = require('../config/webpack.config.ones');
 const paths = require('../config/paths');
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
 const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
@@ -172,7 +172,7 @@ function build(previousFileSizes) {
 
         messages = formatWebpackMessages({
           errors: [errMessage],
-          warnings: [],
+          warnings: []
         });
       } else {
         messages = formatWebpackMessages(
@@ -205,7 +205,7 @@ function build(previousFileSizes) {
       const resolveArgs = {
         stats,
         previousFileSizes,
-        warnings: messages.warnings,
+        warnings: messages.warnings
       };
 
       if (writeStatsJson) {
@@ -223,6 +223,6 @@ function build(previousFileSizes) {
 function copyPublicFolder() {
   fs.copySync(paths.appPublic, paths.appBuild, {
     dereference: true,
-    filter: file => file !== paths.appHtml,
+    filter: file => file !== paths.appHtml
   });
 }

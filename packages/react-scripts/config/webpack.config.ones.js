@@ -10,10 +10,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const { randomBytes } = require('crypto');
 const webpack = require('webpack');
 const resolve = require('resolve');
 const PnpWebpackPlugin = require('pnp-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackScriptsPlugin = require('html-webpack-scripts-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 const TerserPlugin = require('terser-webpack-plugin');
@@ -33,22 +35,18 @@ const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
-// const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 // @remove-on-eject-begin
 const getCacheIdentifier = require('react-dev-utils/getCacheIdentifier');
 // @remove-on-eject-end
 const postcssNormalize = require('postcss-normalize');
 
-const HtmlWebpackScriptsPlugin = require('html-webpack-scripts-plugin');
-
-const appPackageJson = require(paths.appPackageJson);
-
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = process.env.GENERATE_SOURCEMAP !== 'false';
 
-// const webpackDevClientEntry = require.resolve(
-//   'react-dev-utils/webpackHotDevClient'
-// );
+const webpackDevClientEntry = require.resolve(
+  'react-dev-utils/webpackHotDevClient'
+);
 const reactRefreshOverlayEntry = require.resolve(
   'react-dev-utils/refreshOverlayInterop'
 );
@@ -89,6 +87,11 @@ const hasJsxRuntime = (() => {
   }
 })();
 
+const libraryName = (() => {
+  const ramdomStr = randomBytes(16).toString('hex');
+  return `ONESPluginLibrary_${ramdomStr}`;
+})();
+
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
 module.exports = function(webpackEnv) {
@@ -106,13 +109,17 @@ module.exports = function(webpackEnv) {
   // Get environment variables to inject into our app.
   const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
 
+  // 启用 react-refresh 将导致 import-html-entry 执行 executeScripts 时异常，原因未知
   // const shouldUseReactRefresh = env.raw.FAST_REFRESH;
+  const shouldUseReactRefresh = false;
 
   // common function to get style loaders
   const getStyleLoaders = (cssOptions, preProcessor) => {
     const loaders = [
-      isEnvDevelopment && require.resolve('style-loader'),
-      isEnvProduction && {
+      // style-loader 将导致 import-html-entry 执行 executeScripts 时异常，原因未知
+      // isEnvDevelopment && require.resolve('style-loader'),
+      // 由于在 development 环境禁用了 style-loader，所以需要直接输出 CSS 文件
+      (isEnvProduction || isEnvDevelopment) && {
         loader: MiniCssExtractPlugin.loader,
         // css is located in `static/css`, use '../../' to locate index.html folder
         // in production `paths.publicUrlOrPath` can be a relative path
@@ -202,9 +209,7 @@ module.exports = function(webpackEnv) {
       // It requires a trailing slash, or the file assets will get an incorrect path.
       // We inferred the "public path" (such as / or /my-project) from homepage.
       // publicPath: paths.publicUrlOrPath,
-      /**
-       * publicPath 必需为相对路径，否则 import-html-entry 将不能成功加载资源
-       */
+      // publicPath 必需为相对路径，否则 import-html-entry 将不能成功加载资源
       publicPath: '',
       // Point sourcemap entries to original disk location (format as URL on Windows)
       devtoolModuleFilenameTemplate: isEnvProduction
@@ -216,23 +221,24 @@ module.exports = function(webpackEnv) {
           (info => path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')),
       // Prevents conflicts when multiple webpack runtimes (from different apps)
       // are used on the same page.
-      jsonpFunction: `webpackJsonp${appPackageJson.name}`,
+      jsonpFunction: `webpackJsonp${libraryName}`,
       // this defaults to 'window', but by setting it to 'this' then
       // module chunks which are built will work in web workers as well.
       globalObject: 'this',
 
-      /**
-       * 需要打包成 umd
-       * TODO: library 名字是否需要完善
-       */
-      library: 'ONESPlugin',
+      library: libraryName,
       libraryTarget: 'umd'
     },
     /**
-     * 所有外部 @ones-ai/opf-core 通过上下文获取
+     * 所有 host 和 plugin 内同时依赖的且依赖单例才能正常工作的包都需要作为 external
+     * 例如 react hooks 的实现依赖于一个内部计数器实例，多个不同的 react 包一起工作将导致 hooks 出错
      */
     externals: {
-      '@ones-ai/opf-core': '__ONES_AI_OPF_CORE'
+      '@ones-ai/opf-core': '__ONES_AI_OPF_CORE',
+      '@ones-plugin/ui': '__ONES_PLUGIN_UI',
+      'react': 'react',
+      'react-router': 'react-router',
+      'react-router-dom': 'react-router-dom',
     },
     optimization: {
       minimize: false,
@@ -301,10 +307,11 @@ module.exports = function(webpackEnv) {
       // Automatically split vendor and commons
       // https://twitter.com/wSokra/status/969633336732905474
       // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
-      splitChunks: {
-        chunks: 'all',
-        name: isEnvDevelopment
-      },
+      // 启用 splitChunks 将导致 import-html-entry 执行 executeScripts 时异常，原因未知
+      // splitChunks: {
+      //   chunks: 'all',
+      //   name: isEnvDevelopment
+      // },
       // Keep the runtime chunk separated to enable long term caching
       // https://twitter.com/wSokra/status/969679223278505985
       // https://github.com/facebook/create-react-app/issues/5358
@@ -443,13 +450,10 @@ module.exports = function(webpackEnv) {
                         }
                       }
                     }
-                  ]
-                  /**
-                   * 需要移除 HMR 相关代码，否则执行报错
-                   */
-                  // isEnvDevelopment &&
-                  //   shouldUseReactRefresh &&
-                  //   require.resolve('react-refresh/babel'),
+                  ],
+                  isEnvDevelopment &&
+                    shouldUseReactRefresh &&
+                    require.resolve('react-refresh/babel')
                 ].filter(Boolean),
                 // This is a feature of `babel-loader` for webpack (not Babel itself).
                 // It enables caching results in ./node_modules/.cache/babel-loader/
@@ -622,6 +626,13 @@ module.exports = function(webpackEnv) {
             : undefined
         )
       ),
+      /**
+       * TODO: 判断 entry 和 ignore 的逻辑需要更加严谨
+       */
+      new HtmlWebpackScriptsPlugin({
+        entry: /\/main/,
+        ignore: /\/mock/
+      }),
       // Inlines the webpack runtime script. This script is too small to warrant
       // a network request.
       // https://github.com/facebook/create-react-app/issues/5358
@@ -644,28 +655,22 @@ module.exports = function(webpackEnv) {
       // Otherwise React will be compiled in the very slow development mode.
       new webpack.DefinePlugin(env.stringified),
       // This is necessary to emit hot updates (CSS and Fast Refresh):
-      /**
-       * 需要移除 HMR 相关代码，否则执行报错
-       */
-      // isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
+      isEnvDevelopment && new webpack.HotModuleReplacementPlugin(),
       // Experimental hot reloading for React .
       // https://github.com/facebook/react/tree/master/packages/react-refresh
-      /**
-       * 需要移除 HMR 相关代码，否则执行报错
-       */
-      // isEnvDevelopment &&
-      //   shouldUseReactRefresh &&
-      //   new ReactRefreshWebpackPlugin({
-      //     overlay: {
-      //       entry: webpackDevClientEntry,
-      //       // The expected exports are slightly different from what the overlay exports,
-      //       // so an interop is included here to enable feedback on module-level errors.
-      //       module: reactRefreshOverlayEntry,
-      //       // Since we ship a custom dev client and overlay integration,
-      //       // the bundled socket handling logic can be eliminated.
-      //       sockIntegration: false,
-      //     },
-      //   }),
+      isEnvDevelopment &&
+        shouldUseReactRefresh &&
+        new ReactRefreshWebpackPlugin({
+          overlay: {
+            entry: webpackDevClientEntry,
+            // The expected exports are slightly different from what the overlay exports,
+            // so an interop is included here to enable feedback on module-level errors.
+            module: reactRefreshOverlayEntry,
+            // Since we ship a custom dev client and overlay integration,
+            // the bundled socket handling logic can be eliminated.
+            sockIntegration: false
+          }
+        }),
       // Watcher doesn't work well if you mistype casing in a path so we use
       // a plugin that prints an error when you attempt to do this.
       // See https://github.com/facebook/create-react-app/issues/240
@@ -676,7 +681,8 @@ module.exports = function(webpackEnv) {
       // See https://github.com/facebook/create-react-app/issues/186
       isEnvDevelopment &&
         new WatchMissingNodeModulesPlugin(paths.appNodeModules),
-      isEnvProduction &&
+      // 由于在 development 环境禁用了 style-loader，所以需要直接输出 CSS 文件
+      (isEnvProduction || isEnvDevelopment) &&
         new MiniCssExtractPlugin({
           // Options similar to the same options in webpackOptions.output
           // both options are optional
@@ -781,13 +787,7 @@ module.exports = function(webpackEnv) {
               })
             }
           }
-        }),
-      /**
-       * TODO: 判断 entry 的逻辑需要更加严谨
-       */
-      new HtmlWebpackScriptsPlugin({
-        entry: /\/main/
-      })
+        })
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.
     // Tell webpack to provide empty mocks for them so importing them works.
